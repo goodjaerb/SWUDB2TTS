@@ -1,0 +1,82 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+    //id 'org.javamodularity.moduleplugin' version '1.8.10' // this stops module errors with ini4j when i started using javafxplugin 0.1.0
+    id 'org.beryx.jlink' version '3.0.1'
+}
+
+group = "com.goodjaerb"
+version = "1.0-SNAPSHOT"
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    //modularity.inferModulePath.set(false) // i need the plugin but apparently this line is unneeded gibberish.
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(23))
+    }
+}
+
+ext {
+    junitVersion = '5.8.2'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += "--enable-preview"
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Test).configureEach {
+    jvmArgs += "--enable-preview"
+}
+
+tasks.withType(JavaExec).configureEach {
+    jvmArgs += '--enable-preview'
+}
+
+application {
+    mainModule = 'com.goodjaerb.SWUDB2TTS'
+    mainClass = 'com.goodjaerb.SWUDB2TTS.SWUDB2TTS'
+}
+
+javafx {
+    version = '25.0.2'
+    modules = ['javafx.base', 'javafx.controls']
+}
+
+configurations
+        .matching(it -> it.name.contains("downloadSources"))
+        .configureEach {
+            attributes {
+                attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+                attribute(OperatingSystemFamily.OPERATING_SYSTEM_ATTRIBUTE, objects.named(OperatingSystemFamily, javafx.platform.osFamily))
+                attribute(MachineArchitecture.ARCHITECTURE_ATTRIBUTE, objects.named(MachineArchitecture, javafx.platform.arch))
+            }
+        }
+
+dependencies {
+    implementation("com.google.code.gson:gson:2.9.1")
+
+    testImplementation(platform("org.junit:junit-bom:5.10.0"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+jlink {
+    imageZip = project.file("${layout.buildDirectory}/distributions/app-${javafx.platform.classifier}.zip")
+    options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
+    launcher {
+        name = 'SWUDB2TTS'
+    }
+}
+
+jlinkZip {
+    group = 'distribution'
+}
