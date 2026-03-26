@@ -3,15 +3,18 @@ package com.goodjaerb.SWUDB2TTS;
 import com.goodjaerb.SWUDB2TTS.json.Card;
 import com.goodjaerb.SWUDB2TTS.json.DeckListJson;
 import com.goodjaerb.SWUDB2TTS.json.LeaderCard;
+import com.goodjaerb.SWUDB2TTS.json.TokenCard;
 import com.goodjaerb.SWUDB2TTS.util.JsonStringConverter;
 import javafx.application.Application;
 import javafx.concurrent.Task;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
@@ -33,12 +36,14 @@ public class SWUDB2TTS extends Application {
     private static final String SWUDB_IMAGE_URL = "https://www.swudb.com/cdn-cgi/image/quality=35/images/cards/%SET%/%ID%.png";
     private static final StringConverter<DeckListJson> DECKLIST_JSON_CONVERTER = new JsonStringConverter<>(DeckListJson.class);
 
-    private static final int CARD_PNG_WIDTH = 716;
-    private static final int CARD_PNG_HEIGHT = 1000;
+    private static final int CARD_PNG_WIDTH = 409;
+    private static final int CARD_PNG_HEIGHT = 572;
 
     private final BorderPane pane = new BorderPane();
     private final ProgressBar progressBar = new ProgressBar();
     private final Text progressText = new Text();
+    private final CheckBox addTokensCheckBox = new CheckBox("Add Token Cards");
+    private final CheckBox includeSideboardCheckBox = new CheckBox("Include Sideboard Cards");
 
     private GridTask task;
 
@@ -51,14 +56,20 @@ public class SWUDB2TTS extends Application {
         text.setWrappingWidth(275);
 
         progressText.setMouseTransparent(true);
-        progressBar.setPrefWidth(450);
+        progressBar.setPrefWidth(442);
         progressBar.setProgress(0);
 
         StackPane progressPane = new StackPane(progressBar, progressText);
 
+        VBox vbox = new VBox(4);
+        vbox.getChildren().add(addTokensCheckBox);
+        vbox.getChildren().add(includeSideboardCheckBox);
+        vbox.getChildren().add(progressPane);
+
         pane.setPrefSize(450, 450);
+        pane.setPadding(new Insets(4,4,4,4));
         pane.setCenter(text);
-        pane.setBottom(progressPane);
+        pane.setBottom(vbox);
 
         addListeners(stage);
 
@@ -109,7 +120,7 @@ public class SWUDB2TTS extends Application {
         launch();
     }
 
-    static class GridTask extends Task<Void> {
+    class GridTask extends Task<Void> {
         private final File file;
 
         public GridTask(File file) {
@@ -125,24 +136,26 @@ public class SWUDB2TTS extends Application {
         private void createDeckGrid() throws URISyntaxException, IOException {
             DeckListJson deckList = DECKLIST_JSON_CONVERTER.fromString(Files.readString(file.toPath()));
 
-            List<Card> cards = new ArrayList<>(deckList.deck);
-            cards.add(deckList.base);
-            cards.add(deckList.leader);
-            cards.add(new LeaderCard(deckList.leader.id + "-back", 1));
+            List<Card> cardsToDownload = new ArrayList<>(deckList.deck);
+            cardsToDownload.add(deckList.base);
+            cardsToDownload.add(deckList.leader);
+            cardsToDownload.add(new LeaderCard(deckList.leader.id + "-back", 1));
             if(deckList.secondleader != null) {
-                cards.add(deckList.secondleader);
-                cards.add(new LeaderCard(deckList.secondleader.id + "-back", 1));
+                cardsToDownload.add(deckList.secondleader);
+                cardsToDownload.add(new LeaderCard(deckList.secondleader.id + "-back", 1));
             }
-            if(deckList.sideboard != null && !deckList.sideboard.isEmpty()) {
-                cards.addAll(deckList.sideboard);
+            if(includeSideboardCheckBox.isSelected()) {
+                if(deckList.sideboard != null && !deckList.sideboard.isEmpty()) {
+                    cardsToDownload.addAll(deckList.sideboard);
+                }
             }
 
             Map<String, BufferedImage> imageMap = new HashMap<>();
 
             int work = 0;
-            for(Card card : cards) {
-                updateMessage("Step 1: Downloading image " + ++work + "/" + cards.size());
-                updateProgress(work, cards.size());
+            for(Card card : cardsToDownload) {
+                updateMessage("Step 1: Downloading image " + ++work + "/" + cardsToDownload.size());
+                updateProgress(work, cardsToDownload.size());
 
                 String[] split = card.id.split("_");
 
@@ -152,13 +165,15 @@ public class SWUDB2TTS extends Application {
                     image = ImageIO.read(imageUrl);
                 }
                 catch(IOException ex) {
+                    // this can happen because sometimes the back image on swudb isn't named "-back", but instead "-portrait".
                     if(imageUrl.toString().contains("-back")) {
                         imageUrl = new URI(imageUrl.toString().replace("-back", "-portrait")).toURL();
                         image = ImageIO.read(imageUrl);
 
-                        card.id = card.id.replace("-back", "-portrait");
+//                        card.id = card.id.replace("-back", "-portrait");
                     }
 
+                    // if it still isn't there, then get outta here i guess.
                     if(image == null) {
                         throw ex;
                     }
@@ -168,15 +183,25 @@ public class SWUDB2TTS extends Application {
                     // sideways card.
                     image = rotateImage(image, 270);
                 }
-                if(image.getWidth() != CARD_PNG_WIDTH || image.getHeight() != CARD_PNG_HEIGHT) {
-                    image = resizeImage(image, CARD_PNG_WIDTH, CARD_PNG_HEIGHT);
-                }
+                image = resizeImage(image, CARD_PNG_WIDTH, CARD_PNG_HEIGHT);
                 imageMap.put(card.id, image);
             }
 
-            imageMap.put("swu_cardback", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/png/swu_cardback.png"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+            imageMap.put("cardback_swu", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/cardback/cardback_swu.png"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+            imageMap.put("hidden_resistancelogo", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/hidden/hidden_resistancelogo.png"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+            if(addTokensCheckBox.isSelected()) {
+                imageMap.put("token_battledroid", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_battledroid.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_clonetrooper", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_clonetrooper.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_credit", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_credit.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_experience", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_experience.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_force", resizeImage(rotateImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_force.webp"))), 270), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_shield", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_shield.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_spy", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_spy.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_tiefighter", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_tiefighter.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_xwing", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_xwing.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+            }
 
-            List<Card> cardList = deckList.getExpandedCardList();
+            List<Card> cardList = deckList.getExpandedCardList(includeSideboardCheckBox.isSelected(), addTokensCheckBox.isSelected());
             int totalCardCount = 0;
             int numGrids = 0;
             final int maxPerSheet = 69;
@@ -204,13 +229,17 @@ public class SWUDB2TTS extends Application {
 
                             if(cardList.get(totalCardCount).isLeader()) {
                                 BufferedImage leaderImage = imageMap.get(cardList.get(totalCardCount).id + "-back");
-                                if(leaderImage == null) {
-                                    leaderImage = imageMap.get(cardList.get(totalCardCount).id + "-portrait");
-                                }
+//                                if(leaderImage == null) {
+//                                    leaderImage = imageMap.get(cardList.get(totalCardCount).id + "-portrait");
+//                                }
                                 backGraphics.drawImage(leaderImage, null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
                             }
+                            else if(cardList.get(totalCardCount).isToken() && ((TokenCard)cardList.get(totalCardCount)).backId != null) {
+                                BufferedImage tokenImage = imageMap.get(((TokenCard)cardList.get(totalCardCount)).backId);
+                                backGraphics.drawImage(tokenImage, null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
+                            }
                             else {
-                                backGraphics.drawImage(imageMap.get("swu_cardback"), null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
+                                backGraphics.drawImage(imageMap.get("cardback_swu"), null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
                             }
                             currentCardCount++;
                             totalCardCount++;
@@ -221,11 +250,14 @@ public class SWUDB2TTS extends Application {
                         }
                     }
                 }
+                // these fill in the 'hidden card' slots of the deck grids to hide card faces (and show card backs!) when cards are in other people's hands.
+                frontGraphics.drawImage(imageMap.get("hidden_resistancelogo"), null, (maxCols - 1) * CARD_PNG_WIDTH, (maxRows - 1) * CARD_PNG_HEIGHT);
+                backGraphics.drawImage(imageMap.get("cardback_swu"), null, (maxCols - 1) * CARD_PNG_WIDTH, (maxRows - 1) * CARD_PNG_HEIGHT);
 
                 String frontGridFilename = file.getName().substring(0, file.getName().length() - 5);
-                frontGridFilename += (cardList.size() > 69 ? "_" + ++numGrids : "" ) + ".png";
+                frontGridFilename += (cardList.size() > maxPerSheet ? "_" + ++numGrids : "" ) + "_fronts.png";
 
-                String backGridFilename = frontGridFilename.replace(".png", "_backs.png");
+                String backGridFilename = frontGridFilename.replace("_fronts.png", "_backs.png");
 
                 updateMessage("Step 3: Outputting Deck Grids");
                 updateProgress(-1, 1);

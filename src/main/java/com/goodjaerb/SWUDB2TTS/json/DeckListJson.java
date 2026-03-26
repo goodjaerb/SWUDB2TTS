@@ -24,7 +24,7 @@ public class DeckListJson {
                 '}';
     }
 
-    public List<Card> getExpandedCardList() {
+    public List<Card> getExpandedCardList(boolean includeSideboard, boolean addTokenCards) {
         List<Card> cardList = new ArrayList<>();
         cardList.add(leader);
         if(secondleader != null) {
@@ -37,12 +37,21 @@ public class DeckListJson {
             }
         }
 
-        if(sideboard != null && !sideboard.isEmpty()) {
+        if(includeSideboard && sideboard != null && !sideboard.isEmpty()) {
             for(Card c : sideboard) {
                 for(int i = 0; i < c.count; i++) {
                     cardList.add(c);
                 }
             }
+        }
+
+        if(addTokenCards) {
+            cardList.add(new TokenCard("token_battledroid", "token_clonetrooper"));
+            cardList.add(new TokenCard("token_experience", "token_shield"));
+            cardList.add(new TokenCard("token_tiefighter", "token_xwing"));
+            cardList.add(new TokenCard("token_credit"));
+            cardList.add(new TokenCard("token_force"));
+            cardList.add(new TokenCard("token_spy"));
         }
         return Collections.unmodifiableList(cardList);
     }

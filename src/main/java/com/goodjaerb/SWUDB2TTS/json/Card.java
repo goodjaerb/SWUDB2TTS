@@ -15,6 +15,10 @@ public class Card {
         return false;
     }
 
+    public boolean isToken() {
+        return false;
+    }
+
     @Override
     public String toString() {
         return "Card{" +
