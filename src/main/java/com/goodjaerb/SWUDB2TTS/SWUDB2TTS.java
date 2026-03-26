@@ -21,10 +21,12 @@ import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
 import javax.imageio.ImageIO;
+import javax.imageio.stream.ImageInputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -187,18 +189,18 @@ public class SWUDB2TTS extends Application {
                 imageMap.put(card.id, image);
             }
 
-            imageMap.put("cardback_swu", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/cardback/cardback_swu.png"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-            imageMap.put("hidden_resistancelogo", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/hidden/hidden_resistancelogo.png"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+            imageMap.put("cardback_swu",            resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/cardback/cardback_swu.png"         )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+            imageMap.put("hidden_resistancelogo",   resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/hidden/hidden_resistancelogo.png"  )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
             if(addTokensCheckBox.isSelected()) {
-                imageMap.put("token_battledroid", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_battledroid.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_clonetrooper", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_clonetrooper.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_credit", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_credit.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_experience", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_experience.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_force", resizeImage(rotateImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_force.webp"))), 270), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_shield", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_shield.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_spy", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_spy.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_tiefighter", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_tiefighter.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_xwing", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/images/token/token_xwing.webp"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_battledroid",   resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_battledroid.png"      )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_clonetrooper",  resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_clonetrooper.png"     )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_credit",        resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_credit.png"           )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_experience",    resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_experience.png"       )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_force",         resizeImage(rotateImage(ImageIO.read(getClass().getResourceAsStream("/images/token/token_force.png"            )), 270), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_shield",        resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_shield.png"           )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_spy",           resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_spy.png"              )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_tiefighter",    resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_tiefighter.png"       )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_xwing",         resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_xwing.png"            )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
             }
 
             List<Card> cardList = deckList.getExpandedCardList(includeSideboardCheckBox.isSelected(), addTokensCheckBox.isSelected());
