@@ -3,6 +3,7 @@ module com.goodjaerb.SWUDB2TTS {
 
     requires com.google.gson;
     requires java.net.http;
+    requires java.desktop;
 
     exports com.goodjaerb.SWUDB2TTS;
 
