@@ -47,24 +47,6 @@ public class DeckListJson {
         return Collections.unmodifiableList(cardList);
     }
 
-//    public int numCards() {
-//        int count = 2; //start with 2 because base and leader should be automatic.
-//        if(secondleader != null) {
-//            count++;
-//        }
-//
-//        for(Card c : deck) {
-//            count += c.count;
-//        }
-//
-//        if(sideboard != null && !sideboard.isEmpty()) {
-//            for(Card c : sideboard) {
-//                count += c.count;
-//            }
-//        }
-//        return count;
-//    }
-
     private DeckListJson(Metadata metadata, Card base, Card leader, Card secondleader, List<Card> deck, List<Card> sideboard) {
         this.metadata = metadata;
         this.base = base;

@@ -4,7 +4,6 @@ import com.goodjaerb.SWUDB2TTS.json.Card;
 import com.goodjaerb.SWUDB2TTS.json.DeckListJson;
 import com.goodjaerb.SWUDB2TTS.util.JsonStringConverter;
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -27,7 +26,6 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class SWUDB2TTS extends Application {
     private static final String SWUDB_IMAGE_URL = "https://www.swudb.com/cdn-cgi/image/quality=35/images/cards/%SET%/%ID%.png";
@@ -86,7 +84,6 @@ public class SWUDB2TTS extends Application {
                     if(droppedFile.isFile()) {
                         String filename = droppedFile.getName();
                         if(filename.substring(filename.length() - 5).equalsIgnoreCase(".json")) {
-//                        try {
                             task = new GridTask(droppedFile);
                             progressText.textProperty().bind(task.messageProperty());
                             progressBar.progressProperty().bind(task.progressProperty());
@@ -96,10 +93,6 @@ public class SWUDB2TTS extends Application {
                             th.start();
 
                             success = true;
-//                        }
-//                        catch(IOException | URISyntaxException e) {
-//                            new Alert(Alert.AlertType.ERROR, "Exception on reading JSON file.", ButtonType.OK);
-//                        }
                         }
                     }
                 }
