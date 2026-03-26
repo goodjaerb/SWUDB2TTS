@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "com.goodjaerb"
-version = "1.0-SNAPSHOT"
+version = "1.0"
 
 repositories {
     mavenCentral()
@@ -84,10 +84,5 @@ jlinkZip {
 }
 
 jpackage {
-    if(System.getProperty("os.name").toLowerCase().contains("windows")) {
-        installerType = "msi"
-    }
-    else {
-        installerType = "deb"
-    }
+    installerType = "deb"
 }

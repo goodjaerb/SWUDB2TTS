@@ -2,6 +2,7 @@ package com.goodjaerb.SWUDB2TTS;
 
 import com.goodjaerb.SWUDB2TTS.json.Card;
 import com.goodjaerb.SWUDB2TTS.json.DeckListJson;
+import com.goodjaerb.SWUDB2TTS.json.LeaderCard;
 import com.goodjaerb.SWUDB2TTS.util.JsonStringConverter;
 import javafx.application.Application;
 import javafx.concurrent.Task;
@@ -23,8 +24,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
 
 public class SWUDB2TTS extends Application {
@@ -126,14 +128,16 @@ public class SWUDB2TTS extends Application {
             List<Card> cards = new ArrayList<>(deckList.deck);
             cards.add(deckList.base);
             cards.add(deckList.leader);
-            cards.add(new Card(deckList.leader.id + "-back", 1));
+            cards.add(new LeaderCard(deckList.leader.id + "-back", 1));
             if(deckList.secondleader != null) {
                 cards.add(deckList.secondleader);
-                cards.add(new Card(deckList.secondleader.id + "-back", 1));
+                cards.add(new LeaderCard(deckList.secondleader.id + "-back", 1));
             }
             if(deckList.sideboard != null && !deckList.sideboard.isEmpty()) {
                 cards.addAll(deckList.sideboard);
             }
+
+            Map<String, BufferedImage> imageMap = new HashMap<>();
 
             int work = 0;
             for(Card card : cards) {
@@ -141,7 +145,24 @@ public class SWUDB2TTS extends Application {
                 updateProgress(work, cards.size());
 
                 String[] split = card.id.split("_");
-                BufferedImage image = ImageIO.read(new URI(SWUDB_IMAGE_URL.replace("%SET%", split[0]).replace("%ID%", split[1])).toURL());
+
+                URL imageUrl        = new URI(SWUDB_IMAGE_URL.replace("%SET%", split[0]).replace("%ID%", split[1])).toURL();
+                BufferedImage image = null;
+                try {
+                    image = ImageIO.read(imageUrl);
+                }
+                catch(IOException ex) {
+                    if(imageUrl.toString().contains("-back")) {
+                        imageUrl = new URI(imageUrl.toString().replace("-back", "-portrait")).toURL();
+                        image = ImageIO.read(imageUrl);
+
+                        card.id = card.id.replace("-back", "-portrait");
+                    }
+
+                    if(image == null) {
+                        throw ex;
+                    }
+                }
 
                 if(image.getWidth() > image.getHeight()) {
                     // sideways card.
@@ -150,47 +171,72 @@ public class SWUDB2TTS extends Application {
                 if(image.getWidth() != CARD_PNG_WIDTH || image.getHeight() != CARD_PNG_HEIGHT) {
                     image = resizeImage(image, CARD_PNG_WIDTH, CARD_PNG_HEIGHT);
                 }
-                card.image = image;
+                imageMap.put(card.id, image);
             }
 
+            imageMap.put("swu_cardback", resizeImage(ImageIO.read(Objects.requireNonNull(getClass().getResource("/png/swu_cardback.png"))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+
             List<Card> cardList = deckList.getExpandedCardList();
-            int currentCardCount = 0;
+            int totalCardCount = 0;
             int numGrids = 0;
             final int maxPerSheet = 69;
             final int maxCols = 10;
             final int maxRows = 7;
 
             work = 0;
-            while(currentCardCount < cardList.size()) {
-                BufferedImage deckGrid = new BufferedImage(CARD_PNG_WIDTH * maxCols, CARD_PNG_HEIGHT * maxRows, BufferedImage.TYPE_INT_ARGB);
-                Graphics2D graphics = deckGrid.createGraphics();
+            while(totalCardCount < cardList.size()) {
+                BufferedImage deckFrontGrid = new BufferedImage(CARD_PNG_WIDTH * maxCols, CARD_PNG_HEIGHT * maxRows, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage deckBackGrid = new BufferedImage(CARD_PNG_WIDTH * maxCols, CARD_PNG_HEIGHT * maxRows, BufferedImage.TYPE_INT_ARGB);
+
+                Graphics2D frontGraphics = deckFrontGrid.createGraphics();
+                Graphics2D backGraphics = deckBackGrid.createGraphics();
+
+                int currentCardCount = 0;
                 outerloop:
                 for(int r = 0; r < maxRows; r++) {
                     for(int c = 0; c < maxCols; c++) {
-                        if(currentCardCount <= maxPerSheet) {
-                            updateMessage("Step 2: Drawing Grid " + ++work + "/" + cardList.size());
+                        if(currentCardCount < maxPerSheet) {
+                            updateMessage("Step 2: Drawing Card Grids " + ++work + "/" + cardList.size());
                             updateProgress(work, cardList.size());
 
-                            BufferedImage cardImage = cardList.get(currentCardCount).image;
-                            graphics.drawImage(cardImage, null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
-                            currentCardCount++;
+                            BufferedImage frontImage = imageMap.get(cardList.get(totalCardCount).id);//cardList.get(currentCardCount).image;
+                            frontGraphics.drawImage(frontImage, null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
 
-                            if(currentCardCount >= cardList.size()) {
+                            if(cardList.get(totalCardCount).isLeader()) {
+                                BufferedImage leaderImage = imageMap.get(cardList.get(totalCardCount).id + "-back");
+                                if(leaderImage == null) {
+                                    leaderImage = imageMap.get(cardList.get(totalCardCount).id + "-portrait");
+                                }
+                                backGraphics.drawImage(leaderImage, null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
+                            }
+                            else {
+                                backGraphics.drawImage(imageMap.get("swu_cardback"), null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
+                            }
+                            currentCardCount++;
+                            totalCardCount++;
+
+                            if(totalCardCount >= cardList.size()) {
                                 break outerloop;
                             }
                         }
                     }
                 }
 
-                String gridFilename = file.getName().substring(0, file.getName().length() - 5);
-                gridFilename += (cardList.size() > 69 ? "_" + ++numGrids : "" ) + ".png";
+                String frontGridFilename = file.getName().substring(0, file.getName().length() - 5);
+                frontGridFilename += (cardList.size() > 69 ? "_" + ++numGrids : "" ) + ".png";
 
-                updateMessage("Step 3: Outputting Deck Grid");
+                String backGridFilename = frontGridFilename.replace(".png", "_backs.png");
+
+                updateMessage("Step 3: Outputting Deck Grids");
                 updateProgress(-1, 1);
 
-                ImageIO.write(deckGrid, "PNG", file.toPath().resolveSibling(gridFilename).toFile());
-                graphics.dispose();
+                ImageIO.write(deckFrontGrid, "PNG", file.toPath().resolveSibling(frontGridFilename).toFile());
+                ImageIO.write(deckBackGrid, "PNG", file.toPath().resolveSibling(backGridFilename).toFile());
+
+                frontGraphics.dispose();
+                backGraphics.dispose();
             }
+
             updateMessage("Operation Complete!");
             updateProgress(0, 1);
         }

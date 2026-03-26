@@ -7,8 +7,8 @@ import java.util.List;
 public class DeckListJson {
     public final Metadata metadata;
     public final Card base;
-    public final Card leader;
-    public final Card secondleader;
+    public final LeaderCard leader;
+    public final LeaderCard secondleader;
     public final List<Card> deck;
     public final List<Card> sideboard;
 
@@ -26,11 +26,17 @@ public class DeckListJson {
 
     public List<Card> getExpandedCardList() {
         List<Card> cardList = new ArrayList<>();
-        cardList.add(base);
         cardList.add(leader);
         if(secondleader != null) {
             cardList.add(secondleader);
         }
+        cardList.add(base);
+        for(Card c : deck) {
+            for(int i = 0; i < c.count; i++) {
+                cardList.add(c);
+            }
+        }
+
         if(sideboard != null && !sideboard.isEmpty()) {
             for(Card c : sideboard) {
                 for(int i = 0; i < c.count; i++) {
@@ -38,16 +44,10 @@ public class DeckListJson {
                 }
             }
         }
-
-        for(Card c : deck) {
-            for(int i = 0; i < c.count; i++) {
-                cardList.add(c);
-            }
-        }
         return Collections.unmodifiableList(cardList);
     }
 
-    private DeckListJson(Metadata metadata, Card base, Card leader, Card secondleader, List<Card> deck, List<Card> sideboard) {
+    private DeckListJson(Metadata metadata, Card base, LeaderCard leader, LeaderCard secondleader, List<Card> deck, List<Card> sideboard) {
         this.metadata = metadata;
         this.base = base;
         this.leader = leader;
