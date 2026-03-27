@@ -65,8 +65,12 @@ public class SWUDB2TTS extends Application {
             new CardImageComboBoxData("rebel-orange", ".png")
     );
 
-    private static final int CARD_PNG_WIDTH = 409;
-    private static final int CARD_PNG_HEIGHT = 572;
+    private static final int CARD_PNG_WIDTH = 400;
+    private static final int CARD_PNG_HEIGHT = (int) (CARD_PNG_WIDTH * 1.40); // approximate WxH ratio of cards.
+
+    private static final int DECK_GRID_COLUMNS = 10;
+    private static final int DECK_GRID_ROWS = 7;
+    private static final int DECK_GRID_MAX_PER_SHEET = DECK_GRID_COLUMNS * DECK_GRID_ROWS - 1;
 
     private final BorderPane pane = new BorderPane();
     private final ProgressBar progressBar = new ProgressBar();
@@ -283,23 +287,20 @@ public class SWUDB2TTS extends Application {
             List<Card> cardList = deckList.getExpandedCardList(includeSideboardCheckBox.isSelected(), addTokensCheckBox.isSelected());
             int totalCardCount = 0;
             int numGrids = 0;
-            final int maxPerSheet = 69;
-            final int maxCols = 10;
-            final int maxRows = 7;
 
             work = 0;
             while(totalCardCount < cardList.size()) {
-                BufferedImage deckFaceGrid = new BufferedImage(CARD_PNG_WIDTH * maxCols, CARD_PNG_HEIGHT * maxRows, BufferedImage.TYPE_INT_ARGB);
-                BufferedImage deckBackGrid = new BufferedImage(CARD_PNG_WIDTH * maxCols, CARD_PNG_HEIGHT * maxRows, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage deckFaceGrid = new BufferedImage(CARD_PNG_WIDTH * DECK_GRID_COLUMNS, CARD_PNG_HEIGHT * DECK_GRID_ROWS, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage deckBackGrid = new BufferedImage(CARD_PNG_WIDTH * DECK_GRID_COLUMNS, CARD_PNG_HEIGHT * DECK_GRID_ROWS, BufferedImage.TYPE_INT_ARGB);
 
                 Graphics2D faceGraphics = deckFaceGrid.createGraphics();
                 Graphics2D backGraphics = deckBackGrid.createGraphics();
 
                 int currentCardCount = 0;
                 outerloop:
-                for(int r = 0; r < maxRows; r++) {
-                    for(int c = 0; c < maxCols; c++) {
-                        if(currentCardCount < maxPerSheet) {
+                for(int r = 0; r < DECK_GRID_ROWS; r++) {
+                    for(int c = 0; c < DECK_GRID_COLUMNS; c++) {
+                        if(currentCardCount < DECK_GRID_MAX_PER_SHEET) {
                             updateMessage("Step 2: Drawing Card Grids " + ++work + "/" + cardList.size());
                             updateProgress(work, cardList.size());
 
@@ -309,6 +310,10 @@ public class SWUDB2TTS extends Application {
                             if(cardList.get(totalCardCount).isLeader()) {
                                 BufferedImage leaderImage = imageMap.get(cardList.get(totalCardCount).id + "-back");
                                 backGraphics.drawImage(leaderImage, null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
+                            }
+                            else if(cardList.get(totalCardCount).isBase()) {
+                                BufferedImage baseImage = imageMap.get(cardList.get(totalCardCount).id);
+                                backGraphics.drawImage(baseImage, null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
                             }
                             else if(cardList.get(totalCardCount).isToken() && ((TokenCard)cardList.get(totalCardCount)).backId != null) {
                                 BufferedImage tokenImage = imageMap.get(((TokenCard)cardList.get(totalCardCount)).backId);
@@ -327,11 +332,11 @@ public class SWUDB2TTS extends Application {
                     }
                 }
                 // these fill in the 'hidden card' slots of the deck grids to hide card faces (and show card backs!) when cards are in other people's hands.
-                faceGraphics.drawImage(imageMap.get(hiddenImageId), null, (maxCols - 1) * CARD_PNG_WIDTH, (maxRows - 1) * CARD_PNG_HEIGHT);
-                backGraphics.drawImage(imageMap.get(cardBackId), null, (maxCols - 1) * CARD_PNG_WIDTH, (maxRows - 1) * CARD_PNG_HEIGHT);
+                faceGraphics.drawImage(imageMap.get(hiddenImageId), null, (DECK_GRID_COLUMNS - 1) * CARD_PNG_WIDTH, (DECK_GRID_ROWS - 1) * CARD_PNG_HEIGHT);
+                backGraphics.drawImage(imageMap.get(cardBackId), null, (DECK_GRID_COLUMNS - 1) * CARD_PNG_WIDTH, (DECK_GRID_ROWS - 1) * CARD_PNG_HEIGHT);
 
                 String faceGridFilename = file.getName().substring(0, file.getName().length() - 5);
-                faceGridFilename += (cardList.size() > maxPerSheet ? "_" + ++numGrids : "" ) + "_faces.png";
+                faceGridFilename += (cardList.size() > DECK_GRID_MAX_PER_SHEET ? "_" + ++numGrids : "" ) + "_faces.png";
 
                 String backGridFilename = faceGridFilename.replace("_faces.png", "_backs.png");
 

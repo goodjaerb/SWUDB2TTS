@@ -1,7 +1,5 @@
 package com.goodjaerb.SWUDB2TTS.json;
 
-import java.awt.image.BufferedImage;
-
 public class Card {
     public String id;
     public final int count;
@@ -12,6 +10,10 @@ public class Card {
     }
 
     public boolean isLeader() {
+        return false;
+    }
+
+    public boolean isBase() {
         return false;
     }
 

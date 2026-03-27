@@ -6,7 +6,7 @@ import java.util.List;
 
 public class DeckListJson {
     public final Metadata metadata;
-    public final Card base;
+    public final BaseCard base;
     public final LeaderCard leader;
     public final LeaderCard secondleader;
     public final List<Card> deck;
@@ -56,7 +56,7 @@ public class DeckListJson {
         return Collections.unmodifiableList(cardList);
     }
 
-    private DeckListJson(Metadata metadata, Card base, LeaderCard leader, LeaderCard secondleader, List<Card> deck, List<Card> sideboard) {
+    private DeckListJson(Metadata metadata, BaseCard base, LeaderCard leader, LeaderCard secondleader, List<Card> deck, List<Card> sideboard) {
         this.metadata = metadata;
         this.base = base;
         this.leader = leader;
