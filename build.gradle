@@ -1,5 +1,3 @@
-import org.beryx.jlink.JPackageTask
-
 plugins {
     id 'java'
     id 'application'

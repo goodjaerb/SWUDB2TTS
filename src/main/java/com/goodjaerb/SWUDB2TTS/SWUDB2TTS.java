@@ -6,13 +6,20 @@ import com.goodjaerb.SWUDB2TTS.json.LeaderCard;
 import com.goodjaerb.SWUDB2TTS.json.TokenCard;
 import com.goodjaerb.SWUDB2TTS.util.JsonStringConverter;
 import javafx.application.Application;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
@@ -21,22 +28,42 @@ import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
 import javax.imageio.ImageIO;
-import javax.imageio.stream.ImageInputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SWUDB2TTS extends Application {
     private static final String SWUDB_IMAGE_URL = "https://www.swudb.com/cdn-cgi/image/quality=35/images/cards/%SET%/%ID%.png";
     private static final StringConverter<DeckListJson> DECKLIST_JSON_CONVERTER = new JsonStringConverter<>(DeckListJson.class);
+    private static final ObservableList<CardImageComboBoxData> CARDBACKS_LIST = FXCollections.observableArrayList(
+            new CardImageComboBoxData("swu", ".png"),
+            new CardImageComboBoxData("swccg-dark", ".jpg"),
+            new CardImageComboBoxData("swccg-light", ".jpg"),
+            new CardImageComboBoxData("black", ".png"),
+            new CardImageComboBoxData("blue", ".png"),
+            new CardImageComboBoxData("green", ".png"),
+            new CardImageComboBoxData("purple", ".png"),
+            new CardImageComboBoxData("red", ".png"),
+            new CardImageComboBoxData("white", ".png")
+    );
+    private static final ObservableList<CardImageComboBoxData> HIDDEN_CARD_LIST = FXCollections.observableArrayList(
+            new CardImageComboBoxData("starwars-black", ".png"),
+            new CardImageComboBoxData("starwars", ".png"),
+            new CardImageComboBoxData("empire-black", ".png"),
+            new CardImageComboBoxData("firstorder-black", ".png"),
+            new CardImageComboBoxData("mandalorian", ".png"),
+            new CardImageComboBoxData("rebel-black", ".png"),
+            new CardImageComboBoxData("rebel-orange", ".png")
+    );
 
     private static final int CARD_PNG_WIDTH = 409;
     private static final int CARD_PNG_HEIGHT = 572;
@@ -46,12 +73,18 @@ public class SWUDB2TTS extends Application {
     private final Text progressText = new Text();
     private final CheckBox addTokensCheckBox = new CheckBox("Add Token Cards");
     private final CheckBox includeSideboardCheckBox = new CheckBox("Include Sideboard Cards");
+    private final ComboBox<CardImageComboBoxData> cardbackComboBox = new ComboBox<>(CARDBACKS_LIST);
+    private final ComboBox<CardImageComboBoxData> hiddenImageComboBox = new ComboBox<>(HIDDEN_CARD_LIST);
 
     private GridTask task;
 
     @Override
     public void start(Stage stage) {
-        Text text = new Text("Go to SWUDB.com and find or create a deck. Select 'Export' and download the JSON file, then drag-and-drop the JSON onto this window to create your Tabletop Simulator deck grid!");
+        Text text = new Text("""
+        Go to SWUDB.com and find or create a deck. Select 'Export' and download the JSON file, then drag-and-drop the JSON onto this window to create your Tabletop Simulator deck grids!
+        
+        Inside Tabletop Simulator, select Objects->Components->Cards->Custom Deck. Click to place the deck, then Right-Click to configure. Browse to both the Faces grid and the Backs grid, and enable Unique Backs, then Import!
+        """);
         text.setMouseTransparent(true);
         text.setTextAlignment(TextAlignment.CENTER);
         text.setLineSpacing(8);
@@ -61,17 +94,60 @@ public class SWUDB2TTS extends Application {
         progressBar.setPrefWidth(442);
         progressBar.setProgress(0);
 
+        cardbackComboBox.setPrefWidth(125.);
+        cardbackComboBox.setVisibleRowCount(5);
+        cardbackComboBox.setCellFactory(param -> new CardBackListCell());
+        cardbackComboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(CardImageComboBoxData object) {
+                return object.id;
+            }
+
+            @Override
+            public CardImageComboBoxData fromString(String string) {
+                return null;
+            }
+        });
+        cardbackComboBox.getSelectionModel().selectFirst();
+
+        hiddenImageComboBox.setPrefWidth(125.);
+        hiddenImageComboBox.setVisibleRowCount(5);
+        hiddenImageComboBox.setCellFactory(param -> new HiddenCardListCell());
+        hiddenImageComboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(CardImageComboBoxData object) {
+                return object.id;
+            }
+
+            @Override
+            public CardImageComboBoxData fromString(String string) {
+                return null;
+            }
+        });
+        hiddenImageComboBox.getSelectionModel().selectFirst();
+
         StackPane progressPane = new StackPane(progressBar, progressText);
 
-        VBox vbox = new VBox(4);
-        vbox.getChildren().add(addTokensCheckBox);
-        vbox.getChildren().add(includeSideboardCheckBox);
-        vbox.getChildren().add(progressPane);
+        VBox checkBoxVBox = new VBox(4);
+        checkBoxVBox.setPadding(new Insets(4,0,4,0));
+        checkBoxVBox.getChildren().add(addTokensCheckBox);
+        checkBoxVBox.getChildren().add(includeSideboardCheckBox);
+
+        VBox comboBoxVBox = new VBox(4);
+        comboBoxVBox.setPadding(new Insets(4,0,4,0));
+        comboBoxVBox.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        comboBoxVBox.getChildren().add(new HBox(2., cardbackComboBox, new Label("Card Back:")));
+        comboBoxVBox.getChildren().add(new HBox(2., hiddenImageComboBox, new Label("Hidden Card Image:")));
+
+        BorderPane optionsPane = new BorderPane();
+        optionsPane.setLeft(checkBoxVBox);
+        optionsPane.setRight(comboBoxVBox);
+        optionsPane.setBottom(progressPane);
 
         pane.setPrefSize(450, 450);
         pane.setPadding(new Insets(4,4,4,4));
         pane.setCenter(text);
-        pane.setBottom(vbox);
+        pane.setBottom(optionsPane);
 
         addListeners(stage);
 
@@ -152,6 +228,9 @@ public class SWUDB2TTS extends Application {
                 }
             }
 
+            final String cardBackId = "cardback_" + cardbackComboBox.getSelectionModel().getSelectedItem().getIdentifier();
+            final String hiddenImageId = "hidden_" + hiddenImageComboBox.getSelectionModel().getSelectedItem().getIdentifier();
+
             Map<String, BufferedImage> imageMap = new HashMap<>();
 
             int work = 0;
@@ -171,8 +250,6 @@ public class SWUDB2TTS extends Application {
                     if(imageUrl.toString().contains("-back")) {
                         imageUrl = new URI(imageUrl.toString().replace("-back", "-portrait")).toURL();
                         image = ImageIO.read(imageUrl);
-
-//                        card.id = card.id.replace("-back", "-portrait");
                     }
 
                     // if it still isn't there, then get outta here i guess.
@@ -189,8 +266,8 @@ public class SWUDB2TTS extends Application {
                 imageMap.put(card.id, image);
             }
 
-            imageMap.put("cardback_swu",            resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/cardback/cardback_swu.png"         )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-            imageMap.put("hidden_resistancelogo",   resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/hidden/hidden_resistancelogo.png"  )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+            imageMap.put(cardBackId,                resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/cardback/" + cardBackId           )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+            imageMap.put(hiddenImageId,             resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/hidden/" + hiddenImageId          )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
             if(addTokensCheckBox.isSelected()) {
                 imageMap.put("token_battledroid",   resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_battledroid.png"      )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
                 imageMap.put("token_clonetrooper",  resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_clonetrooper.png"     )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
@@ -212,10 +289,10 @@ public class SWUDB2TTS extends Application {
 
             work = 0;
             while(totalCardCount < cardList.size()) {
-                BufferedImage deckFrontGrid = new BufferedImage(CARD_PNG_WIDTH * maxCols, CARD_PNG_HEIGHT * maxRows, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage deckFaceGrid = new BufferedImage(CARD_PNG_WIDTH * maxCols, CARD_PNG_HEIGHT * maxRows, BufferedImage.TYPE_INT_ARGB);
                 BufferedImage deckBackGrid = new BufferedImage(CARD_PNG_WIDTH * maxCols, CARD_PNG_HEIGHT * maxRows, BufferedImage.TYPE_INT_ARGB);
 
-                Graphics2D frontGraphics = deckFrontGrid.createGraphics();
+                Graphics2D faceGraphics = deckFaceGrid.createGraphics();
                 Graphics2D backGraphics = deckBackGrid.createGraphics();
 
                 int currentCardCount = 0;
@@ -226,14 +303,11 @@ public class SWUDB2TTS extends Application {
                             updateMessage("Step 2: Drawing Card Grids " + ++work + "/" + cardList.size());
                             updateProgress(work, cardList.size());
 
-                            BufferedImage frontImage = imageMap.get(cardList.get(totalCardCount).id);//cardList.get(currentCardCount).image;
-                            frontGraphics.drawImage(frontImage, null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
+                            BufferedImage faceImage = imageMap.get(cardList.get(totalCardCount).id);//cardList.get(currentCardCount).image;
+                            faceGraphics.drawImage(faceImage, null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
 
                             if(cardList.get(totalCardCount).isLeader()) {
                                 BufferedImage leaderImage = imageMap.get(cardList.get(totalCardCount).id + "-back");
-//                                if(leaderImage == null) {
-//                                    leaderImage = imageMap.get(cardList.get(totalCardCount).id + "-portrait");
-//                                }
                                 backGraphics.drawImage(leaderImage, null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
                             }
                             else if(cardList.get(totalCardCount).isToken() && ((TokenCard)cardList.get(totalCardCount)).backId != null) {
@@ -241,7 +315,7 @@ public class SWUDB2TTS extends Application {
                                 backGraphics.drawImage(tokenImage, null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
                             }
                             else {
-                                backGraphics.drawImage(imageMap.get("cardback_swu"), null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
+                                backGraphics.drawImage(imageMap.get(cardBackId), null, c * CARD_PNG_WIDTH, r * CARD_PNG_HEIGHT);
                             }
                             currentCardCount++;
                             totalCardCount++;
@@ -253,21 +327,21 @@ public class SWUDB2TTS extends Application {
                     }
                 }
                 // these fill in the 'hidden card' slots of the deck grids to hide card faces (and show card backs!) when cards are in other people's hands.
-                frontGraphics.drawImage(imageMap.get("hidden_resistancelogo"), null, (maxCols - 1) * CARD_PNG_WIDTH, (maxRows - 1) * CARD_PNG_HEIGHT);
-                backGraphics.drawImage(imageMap.get("cardback_swu"), null, (maxCols - 1) * CARD_PNG_WIDTH, (maxRows - 1) * CARD_PNG_HEIGHT);
+                faceGraphics.drawImage(imageMap.get(hiddenImageId), null, (maxCols - 1) * CARD_PNG_WIDTH, (maxRows - 1) * CARD_PNG_HEIGHT);
+                backGraphics.drawImage(imageMap.get(cardBackId), null, (maxCols - 1) * CARD_PNG_WIDTH, (maxRows - 1) * CARD_PNG_HEIGHT);
 
-                String frontGridFilename = file.getName().substring(0, file.getName().length() - 5);
-                frontGridFilename += (cardList.size() > maxPerSheet ? "_" + ++numGrids : "" ) + "_fronts.png";
+                String faceGridFilename = file.getName().substring(0, file.getName().length() - 5);
+                faceGridFilename += (cardList.size() > maxPerSheet ? "_" + ++numGrids : "" ) + "_faces.png";
 
-                String backGridFilename = frontGridFilename.replace("_fronts.png", "_backs.png");
+                String backGridFilename = faceGridFilename.replace("_faces.png", "_backs.png");
 
                 updateMessage("Step 3: Outputting Deck Grids");
                 updateProgress(-1, 1);
 
-                ImageIO.write(deckFrontGrid, "PNG", file.toPath().resolveSibling(frontGridFilename).toFile());
+                ImageIO.write(deckFaceGrid, "PNG", file.toPath().resolveSibling(faceGridFilename).toFile());
                 ImageIO.write(deckBackGrid, "PNG", file.toPath().resolveSibling(backGridFilename).toFile());
 
-                frontGraphics.dispose();
+                faceGraphics.dispose();
                 backGraphics.dispose();
             }
 
@@ -320,6 +394,51 @@ public class SWUDB2TTS extends Application {
             g2d.dispose();
 
             return result;
+        }
+    }
+
+    record CardImageComboBoxData(String id, String type) {
+        public String getIdentifier() {
+            return id + type;
+        }
+    }
+
+    static abstract class CardImageListCell extends ListCell<CardImageComboBoxData> {
+        protected final ImageView view = new ImageView();
+
+        @Override
+        protected void updateItem(CardImageComboBoxData item, boolean empty) {
+            super.updateItem(item, empty);
+
+            if(item == null || empty) {
+                setGraphic(null);
+            }
+            else {
+                Image image = new Image(getClass().getResourceAsStream(getResourceString(item)));
+                view.setImage(image);
+                view.setPreserveRatio(true);
+                view.setFitHeight(64);
+                view.setFitWidth(64);
+                setGraphic(view);
+            }
+        }
+
+        abstract String getResourceString(CardImageComboBoxData item);
+    }
+
+    static class CardBackListCell extends CardImageListCell {
+
+        @Override
+        String getResourceString(CardImageComboBoxData item) {
+            return "/images/cardback/cardback_" + item.id + item.type;
+        }
+    }
+
+    static class HiddenCardListCell extends CardImageListCell {
+
+        @Override
+        String getResourceString(CardImageComboBoxData item) {
+            return "/images/hidden/hidden_" + item.id + item.type;
         }
     }
 }
