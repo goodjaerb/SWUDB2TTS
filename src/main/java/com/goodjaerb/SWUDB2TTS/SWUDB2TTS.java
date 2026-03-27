@@ -336,7 +336,7 @@ public class SWUDB2TTS extends Application {
                 backGraphics.drawImage(imageMap.get(cardBackId), null, (DECK_GRID_COLUMNS - 1) * CARD_PNG_WIDTH, (DECK_GRID_ROWS - 1) * CARD_PNG_HEIGHT);
 
                 String faceGridFilename = file.getName().substring(0, file.getName().length() - 5);
-                faceGridFilename += (cardList.size() > DECK_GRID_MAX_PER_SHEET ? "_" + ++numGrids : "" ) + "_faces.png";
+                faceGridFilename += (cardList.size() > DECK_GRID_MAX_PER_SHEET ? "_" + ++numGrids : "" ) + "_" + currentCardCount + "_faces.png";
 
                 String backGridFilename = faceGridFilename.replace("_faces.png", "_backs.png");
 
