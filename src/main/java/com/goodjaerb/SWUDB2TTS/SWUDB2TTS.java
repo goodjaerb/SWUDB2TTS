@@ -36,10 +36,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 
 public class SWUDB2TTS extends Application {
     private static final String SWUDB_IMAGE_URL = "https://www.swudb.com/cdn-cgi/image/quality=35/images/cards/%SET%/%ID%.png";
@@ -87,7 +85,7 @@ public class SWUDB2TTS extends Application {
         Text text = new Text("""
         Go to SWUDB.com and find or create a deck. Select 'Export' and download the JSON file, then drag-and-drop the JSON onto this window to create your Tabletop Simulator deck grids!
         
-        Inside Tabletop Simulator, select Objects->Components->Cards->Custom Deck. Click to place the deck, then Right-Click to configure. Browse to both the Faces grid and the Backs grid, and enable Unique Backs, then Import!
+        Inside Tabletop Simulator, select Objects->Components->Cards->Custom Deck. Click to place the deck, then Right-Click to configure. Browse to both the Faces grid and the Backs grid, set the number of cards from the filename, and enable Unique Backs, then Import!
         """);
         text.setMouseTransparent(true);
         text.setTextAlignment(TextAlignment.CENTER);
@@ -270,18 +268,18 @@ public class SWUDB2TTS extends Application {
                 imageMap.put(card.id, image);
             }
 
-            imageMap.put(cardBackId,                resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/cardback/" + cardBackId           )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-            imageMap.put(hiddenImageId,             resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/hidden/" + hiddenImageId          )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+            imageMap.put(cardBackId,                getResourceCardImage("/images/cardback/" + cardBackId));
+            imageMap.put(hiddenImageId,             getResourceCardImage("/images/hidden/" + hiddenImageId));
             if(addTokensCheckBox.isSelected()) {
-                imageMap.put("token_battledroid",   resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_battledroid.png"      )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_clonetrooper",  resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_clonetrooper.png"     )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_credit",        resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_credit.png"           )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_experience",    resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_experience.png"       )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_force",         resizeImage(rotateImage(ImageIO.read(getClass().getResourceAsStream("/images/token/token_force.png"            )), 270), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_shield",        resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_shield.png"           )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_spy",           resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_spy.png"              )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_tiefighter",    resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_tiefighter.png"       )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
-                imageMap.put("token_xwing",         resizeImage(            ImageIO.read(getClass().getResourceAsStream("/images/token/token_xwing.png"            )), CARD_PNG_WIDTH, CARD_PNG_HEIGHT));
+                imageMap.put("token_battledroid",   getResourceCardImage("/images/token/token_battledroid.png"));
+                imageMap.put("token_clonetrooper",  getResourceCardImage("/images/token/token_clonetrooper.png"));
+                imageMap.put("token_credit",        getResourceCardImage("/images/token/token_credit.png"));
+                imageMap.put("token_experience",    getResourceCardImage("/images/token/token_experience.png"));
+                imageMap.put("token_force",         getResourceCardImage("/images/token/token_force.png"));
+                imageMap.put("token_shield",        getResourceCardImage("/images/token/token_shield.png"));
+                imageMap.put("token_spy",           getResourceCardImage("/images/token/token_spy.png"));
+                imageMap.put("token_tiefighter",    getResourceCardImage("/images/token/token_tiefighter.png"));
+                imageMap.put("token_xwing",         getResourceCardImage("/images/token/token_xwing.png"));
             }
 
             List<Card> cardList = deckList.getExpandedCardList(includeSideboardCheckBox.isSelected(), addTokensCheckBox.isSelected());
@@ -354,6 +352,10 @@ public class SWUDB2TTS extends Application {
             updateProgress(0, 1);
         }
 
+        public static BufferedImage getResourceCardImage(String id) throws IOException {
+            return resizeImage(ImageIO.read(Objects.requireNonNull(SWUDB2TTS.class.getResourceAsStream(id))), CARD_PNG_WIDTH, CARD_PNG_HEIGHT);
+        }
+
         public static BufferedImage resizeImage(BufferedImage originalImage, int targetWidth, int targetHeight) throws IOException {
             // Create a new BufferedImage with the desired dimensions and type (TYPE_INT_ARGB for transparency support)
             BufferedImage resizedImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_ARGB);
@@ -392,7 +394,7 @@ public class SWUDB2TTS extends Application {
             // 1. Translate to the center of the new image
             g2d.translate((newW - w) / 2, (newH - h) / 2);
             // 2. Rotate around the center of the original image
-            g2d.rotate(radians, w / 2, h / 2);
+            g2d.rotate(radians, (double) w / 2, (double) h / 2);
 
             // Draw the original image onto the new image context
             g2d.drawRenderedImage(image, null);
@@ -408,7 +410,7 @@ public class SWUDB2TTS extends Application {
         }
     }
 
-    static abstract class CardImageListCell extends ListCell<CardImageComboBoxData> {
+    abstract static class CardImageListCell extends ListCell<CardImageComboBoxData> {
         protected final ImageView view = new ImageView();
 
         @Override
@@ -419,7 +421,7 @@ public class SWUDB2TTS extends Application {
                 setGraphic(null);
             }
             else {
-                Image image = new Image(getClass().getResourceAsStream(getResourceString(item)));
+                Image image = new Image(Objects.requireNonNull(getClass().getResourceAsStream(getResourceString(item))));
                 view.setImage(image);
                 view.setPreserveRatio(true);
                 view.setFitHeight(64);
